@@ -394,7 +394,7 @@ h1 {
 /* ---------------- GLOBAL BUTTON STYLE ---------------- */
 /* Excludes edit & delete so they are not overridden */
 
-button:not(.download-pdf):not(.hamburger):not(.edit-btn):not(.delete-btn):not(.settings-btn) {
+button:not(.download-pdf):not(.hamburger):not(.edit-btn):not(.delete-btn):not(.settings-btn):not(.view-btn):not(.settings-button) {
     background: #f0f2f5;
     border: none;
     padding: 6px 12px;
@@ -404,7 +404,7 @@ button:not(.download-pdf):not(.hamburger):not(.edit-btn):not(.delete-btn):not(.s
     transition: all 0.2s;
 }
 
-button:not(.download-pdf):not(.hamburger):not(.edit-btn):not(.delete-btn):not(.settings-btn):hover {
+button:not(.download-pdf):not(.hamburger):not(.edit-btn):not(.delete-btn):not(.settings-btn):not(.view-btn):not(.settings-button):hover {
     background: var(--secondary-blue);
     color: white;
 }
@@ -682,12 +682,13 @@ button.active-filter:focus {
   </svg>
 </div>
             <div class="settings-dropdown" id="settingsDropdown">
-            <div class="settings-header"><span id="user-info">Not logged in</span></div>
+            <div class="settings-header"><span>ADMIN</span></div>
             <hr>
             <div class="settings-content">
-              <input id="new-email" type="email" placeholder="New Email"><button id="change-email-btn">Change Email</button>
-			  <input id="new-phone" type="text" placeholder="New Phone"><button id="change-phone-btn">Change Phone</button>
-              <input id="new-password" type="password" placeholder="New Password"><button id="change-password-btn">Change Password</button>
+			 
+              <input id="new-email" type="email" placeholder="New Email"><button class="settings-button" id="change-email-btn">Change Email</button>
+			  <input id="new-phone" type="text" placeholder="New Phone"><button class="settings-button" id="change-phone-btn">Change Phone</button>
+              <input id="new-password" type="password" placeholder="New Password"><button class="settings-button" id="change-password-btn">Change Password</button>
             </div>
             <hr>
             <button id="logoutBtn">Logout</button>
@@ -794,7 +795,7 @@ button.active-filter:focus {
             <label>Abstract</label>
             <textarea id="abstract" rows="4"></textarea>
 
-			<label>Full Research File (PDF or DOC/DOCX)</label>
+			<label>Upload Thesis File (PDF format)</label>
 			<input type="file" id="upload_research_file" accept=".pdf,.doc,.docx">
 
             <label>Keywords (comma separated)</label>
@@ -1077,7 +1078,7 @@ button.active-filter:focus {
 	
           ${r.file_url ? `
             <button class="view-btn" onclick="viewFile('${r.file_url}')">
-              View PDF/DOC
+              View File
             </button>
           ` : ""}
         </div>
