@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Library Login</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+/* =========================
+   ROOT VARIABLES
+========================= */
+:root {
+  --primary-blue: #003366;
+  --secondary-blue: #00509d;
+  --accent-yellow: #ffcc00;
+  --soft-white: #f8f9fa;
+  --text-dark: #212529;
+  --gold: #fbbf24;
+  --text-gray: #6c757d;
+  --shadow: 0 4px 12px rgba(0,0,0,0.08);
+  --gradient: linear-gradient(135deg, #003366 0%, #00509d 100%);
+  --max: 1240px;
+}
+
+/* =========================
+   GLOBAL RESET
+========================= */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+
+  display: flex;
+  flex-direction: column;
+
+  background: #ffffff;
+  color: var(--text-dark);
+  line-height: 1.6;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+a {
+  text-decoration: none;
+}
+
+/* =========================
+   LAYOUT HELPERS
+========================= */
+.container {
+  width: min(var(--max), calc(100% - 2rem));
+  margin: auto;
+}
+
+/* push footer down */
+#main-content {
+  flex: 1;
+}
+
+/* =========================
+   HEADER
+========================= */
+header {
+  position: sticky;
+  top: 0;
+  z-index: 999;
+  backdrop-filter: blur(14px);
+  background: #1e3a8a;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+
+.header-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 0;
+}
+
+/* LOGO */
+.myImage {
+  width: min(420px, 80vw);
+  height: auto;
+}
+
+/* =========================
+   NAV (kept for future use)
+========================= */
+.nav-menu {
+  display: flex;
+  align-items: center;
+  gap: 1.6rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.nav-menu a {
+  color: #fff;
+  font-weight: 600;
+  position: relative;
+  padding: 0.2rem 0;
+}
+
+.nav-menu a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -4px;
+  width: 0;
+  height: 2.5px;
+  border-radius: 2px;
+  background: var(--gold);
+  transition: 0.25s ease;
+}
+
+.nav-menu a:hover::after,
+.nav-menu a.active::after {
+  width: 100%;
+}
+
+/* =========================
+   DROPDOWN
+========================= */
+.dropdown {
+  position: relative;
+}
+
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: white;
+  min-width: 200px;
+  list-style: none;
+  padding: 8px 0;
+  border-radius: 6px;
+  box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+  z-index: 1000;
+}
+
+.dropdown:hover .dropdown-menu {
+  display: block;
+}
+
+.dropdown-menu a {
+  display: block;
+  padding: 10px 16px;
+  color: #1e3a8a;
+}
+
+/* =========================
+   AUTH MODAL (IMPORTANT FIX)
+========================= */
+#auth-modal {
+  flex: 1;
+  min-height: 100vh;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 1rem;
+  background: #f3f4f6;
+}
+
+/* LOGIN BOX */
+#auth-box {
+  background: #ffffff;
+  padding: 2rem;
+  border-radius: 12px;
+
+  width: 92%;
+  max-width: 420px;
+
+  text-align: center;
+  border: 2px solid #4f46e5;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+#auth-box h2 {
+  margin-bottom: 1rem;
+}
+
+/* INPUTS */
+#auth-box input {
+  width: 100%;
+  margin: 10px 0;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 0.95rem;
+}
+
+#auth-box input:focus {
+  border-color: #4f46e5;
+  outline: none;
+}
+
+/* BUTTON */
+#auth-box button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 10px;
+  background: #fbbf24;
+  color: black;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+#auth-box button:hover {
+  background: #f59e0b;
+}
+
+/* =========================
+   MAIN CONTENT
+========================= */
+#main-content {
+  display: none;
+  padding: 2rem;
+}
+
+/* =========================
+   FOOTER FIX
+========================= */
+footer {
+  margin-top: auto;
+  background: #1e3a8a;
+  color: white;
+  text-align: center;
+  padding: 2rem;
+}
+
+.footer-accent {
+  color: #fbbf24;
+  font-weight: bold;
+}
+
+/* =========================
+   TOAST
+========================= */
+.toast {
+  position: fixed;
+  top: 10%;
+  left: 50%;
+  transform: translate(-50%, -60%);
+  background: #fff;
+  color: #111;
+  padding: 16px 22px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+  font-size: 0.95rem;
+  opacity: 0;
+  transition: all 0.3s ease;
+  z-index: 9999;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translate(-50%, -50%);
+}
+
+.toast.success {
+  border-top: 4px solid #16a34a;
+}
+
+.toast.error {
+  border-top: 4px solid #dc2626;
+}
+
+/* =========================
+   MOBILE RESPONSIVE
+========================= */
+@media (max-width: 768px) {
+
+  .header-container {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .myImage {
+    width: min(320px, 90vw);
+  }
+
+  #auth-box {
+    padding: 1.2rem;
+  }
+
+  #auth-box input {
+    font-size: 1rem;
+    padding: 14px;
+  }
+
+  #auth-box button {
+    font-size: 1rem;
+    padding: 14px;
+  }
+}
+
+/* =========================
+   TABLET RESPONSIVE
+========================= */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .myImage {
+    width: min(380px, 70vw);
+  }
+}
+
+  </style>
+   <style>@view-transition { navigation: auto; }</style>
+</head>
+<div id="toast" class="toast"></div>
+<body>
+
+<header>
+  <div class="container header-container">
+    <div class="brand"><img src="ursm logo.png" alt="URS Logo" class="myImage"></div>
+  </div>
+</header>
+
+<div id="auth-modal">
+  <div id="auth-box">
+    <h2 id="auth-title">Login</h2>
+    <input id="su_student" placeholder="Student Number" style="display:none;">
+    <input id="su_name" placeholder="Full Name" style="display:none;">
+    <input id="su_email" placeholder="Email" style="display:none;">
+    <input id="su_phone" placeholder="Phone" style="display:none;">
+    <input id="su_password" type="password" placeholder="Password" style="display:none;">
+
+    <input id="li_student" placeholder="Student Number">
+    <input id="li_email" placeholder="Email">
+    <input id="li_password" type="password" placeholder="Password">
+
+    <button id="auth-btn">Login</button>
+    <p>
+      <span id="toggle-text">No account?</span>
+      <a href="#" id="toggle-link">Sign Up</a>
+    </p>
+  </div>
+</div>
+
+<div id="main-content">
+  <h1>Welcome to URSM Library</h1>
+  <p id="user-info"></p>
+  <button id="logoutBtn">Logout</button>
+</div>
+
+<footer>
+  <p>© 2025 <span class="footer-accent">University of Rizal System Morong Campus Library</span>. All rights reserved.</p>
+</footer>
+
+<script>
+// ---------------- SUPABASE ----------------
+const SUPABASE_URL = "https://vwzhzycagqqhcxbopjtc.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ3emh6eWNhZ3FxaGN4Ym9wanRjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1NjI4NjEsImV4cCI6MjA5MDEzODg2MX0.KajiaXQecd-Icu6D9XUKViBsRn4bldVfwoFeamog8ww";
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ---------------- ELEMENTS ----------------
+const authModal = document.getElementById("auth-modal");
+const mainContent = document.getElementById("main-content");
+const authBtn = document.getElementById("auth-btn");
+const toggleLink = document.getElementById("toggle-link");
+const toggleText = document.getElementById("toggle-text");
+const authTitle = document.getElementById("auth-title");
+const logoutBtn = document.getElementById("logoutBtn");
+const userInfo = document.getElementById("user-info");
+
+let isSignup = false;
+
+// ---------------- TOAST ----------------
+function showToast(message, type = "info") {
+  const toast = document.getElementById("toast");
+  toast.textContent = message;
+  toast.className = `toast show ${type}`;
+  setTimeout(() => {
+    toast.classList.remove("show");
+  }, 3000);
+}
+
+// ---------------- BUTTON STATE ----------------
+function setButtonState(button, state) {
+  button.disabled = state === "loading";
+  button.textContent = state === "loading"
+    ? "Processing..."
+    : (isSignup ? "Register" : "Login");
+}
+
+// ---------------- HELPERS ----------------
+function normalizeName(name){
+  return name.toLowerCase().replace(/[.,]/g,"").replace(/\s+/g," ").trim();
+}
+function normalizeStudentNumber(num){
+  return num.toUpperCase().replace(/\s+/g,"").replace(/-/g,"");
+}
+
+
+
+// ---------------- TOGGLE ----------------
+function updateMode() {
+  authTitle.innerText = isSignup ? "Sign Up" : "Login";
+  toggleText.innerText = isSignup ? "Already have an account?" : "No account?";
+  toggleLink.innerText = isSignup ? "Login" : "Sign Up";
+
+  ["su_student","su_name","su_email","su_phone","su_password"].forEach(id => {
+    document.getElementById(id).style.display = isSignup ? "block" : "none";
+  });
+
+  ["li_student","li_email","li_password"].forEach(id => {
+    document.getElementById(id).style.display = isSignup ? "none" : "block";
+  });
+
+  authBtn.innerText = isSignup ? "Register" : "Login";
+}
+
+toggleLink.addEventListener("click", e => {
+  e.preventDefault();
+  isSignup = !isSignup;
+  updateMode();
+});
+updateMode();
+
+// ---------------- ROLE REDIRECT ----------------
+async function redirectByRole(userId){
+  const { data: profile } = await supabaseClient
+    .from("profiles")
+    .select("role")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if(!profile){
+    showToast("Profile not found", "error");
+    return;
+  }
+
+  const role = (profile.role || "").toLowerCase().trim();
+
+  if(role === "admin"){
+    window.location.replace("adminsecurity.html");
+  } else {
+    window.location.replace("home.html");
+  }
+}
+
+// ---------------- SIGNUP ----------------
+async function signUp(){
+  const btn = authBtn;
+  setButtonState(btn, "loading");
+
+  try {
+    const student = normalizeStudentNumber(document.getElementById("su_student").value);
+    const nameInput = document.getElementById("su_name").value.trim();
+    const email = document.getElementById("su_email").value.trim();
+    const phone = document.getElementById("su_phone").value.trim();
+    const password = document.getElementById("su_password").value;
+
+    // --- Verify via RPC ---
+const { data: isVerified, error } = await supabaseClient.rpc("verify_student", {
+  student_num: student,
+  input_name: nameInput
+});
+
+if(error || !isVerified){
+  showToast("Student not found or name mismatch", "error");
+  setButtonState(btn, "normal");
+  return;
+}
+
+    // --- Fetch full student record ---
+    const { data: studentData, error: studentError } =
+  await supabaseClient.rpc("get_student_record", {
+    student_num: student
+  });
+
+const record = studentData?.[0];
+
+if(studentError || !record){
+  showToast("Student record not found", "error");
+  setButtonState(btn, "normal");
+  return;
+}
+
+    if(record.is_registered){
+      showToast("Already registered", "error");
+      setButtonState(btn, "normal");
+      return;
+    }
+
+    // --- Sign up ---
+    const { data: authData, error: authError } = await supabaseClient.auth.signUp({ email, password });
+
+if(authError){
+  showToast(authError.message, "error");
+  setButtonState(btn, "normal");
+  return;
+}
+
+const user = authData.user;
+
+if (!user) {
+  showToast("Signup failed: no user returned", "error");
+  setButtonState(btn, "normal");
+  return;
+}
+
+console.log("USER ID:", user.id);
+// --- Register student via RPC ---
+const { error: registerError } = await supabaseClient.rpc("register_student", {
+  p_student_number: record.student_number,
+  p_full_name: record.full_name,
+  p_email: email,
+  p_phone: phone,
+  p_user_id: user.id
+});
+
+if (registerError) {
+  console.error("REGISTER ERROR:", registerError);
+  showToast(registerError.message, "error");
+  setButtonState(btn, "normal");
+  return;
+}
+
+showToast("Account created! Check email.", "success");
+setButtonState(btn, "normal");
+return;
+
+} catch (err) {
+  console.error(err);
+  showToast("Unexpected error", "error");
+}
+
+setButtonState(btn, "normal");
+}
+
+
+
+// ---------------- LOGIN ----------------
+async function login(){
+  const btn = authBtn;
+  setButtonState(btn, "loading");
+
+  try {
+    const student = normalizeStudentNumber(document.getElementById("li_student").value);
+    const email = document.getElementById("li_email").value.trim();
+    const password = document.getElementById("li_password").value;
+
+    const { data, error } =
+      await supabaseClient.auth.signInWithPassword({ email, password });
+
+    if(error){
+      showToast(error.message, "error");
+      setButtonState(btn, "normal");
+      return;
+    }
+
+    const user = data.user;
+
+    const { data: profiles } = await supabaseClient
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id);
+
+    const profile = profiles.find(p =>
+      normalizeStudentNumber(p.student_number) === student
+    );
+
+    if(!profile){
+      showToast("Student number mismatch", "error");
+      await supabaseClient.auth.signOut();
+      setButtonState(btn, "normal");
+      return;
+    }
+
+    showToast("Login successful!", "success");
+
+    await redirectByRole(user.id);
+
+  } catch (err) {
+    console.error(err);
+    showToast("Unexpected error", "error");
+  }
+
+  setButtonState(btn, "normal");
+}
+
+// ---------------- LOGOUT ----------------
+logoutBtn.addEventListener("click", async () => {
+  await supabaseClient.auth.signOut();
+  showToast("Logged out", "success");
+  authModal.style.display = "flex";
+  mainContent.style.display = "none";
+});
+
+// ---------------- BUTTON ----------------
+authBtn.addEventListener("click", () => {
+  isSignup ? signUp() : login();
+});
+
+// ---------------- AUTO LOAD USER ----------------
+async function loadUser(){
+  const { data: { session } } = await supabaseClient.auth.getSession();
+
+  if(session?.user?.id){
+    redirectByRole(session.user.id);
+  } else {
+    authModal.style.display = "flex";
+    mainContent.style.display = "none";
+  }
+}
+
+// ---------------- AUTH STATE CHANGE ----------------
+supabaseClient.auth.onAuthStateChange((event, session)=>{
+  if(session?.user?.id){
+    redirectByRole(session.user.id);
+  }
+});
+
+// INITIAL LOAD
+loadUser();
+
+</script>
+</body>
+</html>
