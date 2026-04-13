@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Admin Panel</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+/* GLOBAL PAGE SIDE MARGINS */
+.page-wrap {
+  width: min(1240px, calc(100% - 3rem));
+  margin: 0 auto;
+}
+html, body {
+  height: 100%;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+#main-content {
+  flex: 1; /* pushes footer down */
+}
+
+footer {
+  margin-top: auto;
+}
+	:root {
+            --primary-blue: #003366;
+            --secondary-blue: #00509d;
+            --accent-yellow: #ffcc00;
+            --soft-white: #f8f9fa;
+            --text-dark: #212529;
+			--gold: #fbbf24;
+            --text-gray: #6c757d;
+            --shadow: 0 4px 12px rgba(0,0,0,0.08);
+            --gradient: linear-gradient(135deg, #003366 0%, #00509d 100%);
+			--max: 1240px;
+        }
+
+    body {
+	font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--soft-white);
+      color: var(--text-dark);
+      line-height: 1.6;
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      
+      background: #ffffff;
+      height: 100%;
+    }
+	
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html { height: 100%; scroll-behavior: smooth; }
+
+    img { max-width: 100%; display: block; }
+    a { text-decoration: none; }
+    .container { width: min(var(--max), calc(100% - 2rem)); margin: auto; }
+
+    /* HEADER */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 999;
+      backdrop-filter: blur(14px);
+      background: #1e3a8a;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    }
+
+    .header-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1rem 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      color: var(--white);
+    }
+
+    .myImage{width:450px;max-width:100%}
+    .brand-text small {
+      display: block;
+      color: rgba(255,255,255,0.75);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-size: 0.72rem;
+    }
+
+    .brand-text strong {
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .nav-menu {
+      display: flex;
+      align-items: center;
+      gap: 1.6rem;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .nav-menu a {
+      color: #fff;
+      font-weight: 600;
+      position: relative;
+      padding: 0.2rem 0;
+    }
+
+    .nav-menu a::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      bottom: -4px;
+      width: 0;
+            height: 2.5px;
+  border-radius: 2px;
+      background: var(--gold);
+      transition: 0.25s ease;
+    }
+
+    .nav-menu a:hover::after,
+    .nav-menu a.active::after { width: 100%; }
+
+    .nav-cta {
+      background: var(--gold);
+      color: var(--navy) !important;
+      padding: 0.7rem 1rem !important;
+      border-radius: 999px;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .nav-cta::after { display: none; }
+
+    /* DROPDOWN MENU */
+.dropdown{
+  position:relative;
+}
+
+.dropdown-menu{
+  display:none;
+  position:absolute;
+  top:100%;
+  left:0;
+  background:white;
+  min-width:200px;
+  list-style:none;
+  padding:8px 0;
+  border-radius:6px;
+  box-shadow:0 6px 15px rgba(0,0,0,0.15);
+  z-index:1000;
+}
+
+.dropdown-menu li{
+  width:100%;
+}
+
+.dropdown-menu a{
+  display:block;
+  padding:10px 16px;
+  color:#1e3a8a;
+  text-decoration:none;
+  font-size:0.95rem;
+}
+
+.dropdown-menu a:hover{
+  background:#f3f4f6;
+  color:#fbbf24;
+}
+
+/* show dropdown on hover (desktop) */
+.dropdown:hover .dropdown-menu{
+  display:block;
+}
+
+/* remove underline animation inside dropdown */
+.dropdown-menu a::after{
+  display:none;
+}
+	/* Footer */
+    footer {
+      background: #1e3a8a;
+      color: #ffffff;
+      text-align: center;
+      padding: 2.5rem 2rem;
+    }
+
+    footer p {
+      margin: 0;
+      opacity: 0.9;
+    }
+
+    .footer-accent {
+      color: #fbbf24;
+      font-weight: bold;
+    }
+	
+	
+
+/* Mobile breakpoint */
+@media (max-width: 768px) {
+  .body {
+    background: url('viewphone.gif') no-repeat center center fixed;
+	height: 100%;
+  width: 100%;
+    background-size: cover;
+	
+  }
+}
+@media (max-width: 900px) {
+  .header-container { 
+    flex-direction: column; 
+    gap: 1rem; 
+  }
+
+  .nav-menu { 
+    gap: 1rem; 
+  }
+}
+/* =========================
+   TABLET RESPONSIVENESS
+   ========================= */
+/* Tablet breakpoint */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .body {
+    background: url('viewtablet.gif') no-repeat center center fixed;
+    background-size: cover;
+    height: 100%;
+    width: 100%;
+  }
+}
+
+.user-settings { position: relative; margin-left: 1rem; } 
+.gear-icon svg { width: 50px; height: 50px; display: block; } 
+.gear-icon:hover svg { transform: rotate(20deg); transition: 0.3s ease; } 
+.settings-dropdown { display: none; position: absolute; right: 0; top: 120%; width: 260px; max-height: 400px; overflow-y: auto; background: #ffffff; padding: 15px; border-radius: 10px; box-shadow: 0 8px 20px rgba(0,0,0,0.15); z-index: 1000; } 
+.settings-header { font-weight: bold; color: #1e3a8a; text-align: center; margin-bottom: 8px; } 
+.settings-content h4 { margin: 10px 0; font-size: 0.95rem; color: #1e3a8a; } 
+.settings-content input { width: 100%; padding: 6px; margin: 6px 0; border: 1px solid #ddd; border-radius: 5px; font-size: 0.85rem; } 
+.settings-content button { width: 100%; padding: 6px; margin-bottom: 8px; background: #1e3a8a; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 0.85rem; } 
+.settings-content button:hover { background: #2563eb; } #logoutBtn { display: block; margin-left: auto; /* pushes it to the right */ background: #1e3a8a; border-radius: 5px; color: white; margin-top: 10px; } 
+#logoutBtn:hover { background:white; border-radius: 5px; color:#1e3a8a; } 
+
+.dashboard {
+  display: flex;
+  height: 100vh;
+}
+
+/* SIDEBAR */
+.sidebar {
+  width: 240px;
+  background: #E6E6E6;
+  color: #333;
+  padding: 20px;
+}
+
+.logo {
+  margin-bottom: 30px;
+}
+
+.menu {
+  list-style: none;
+  padding: 0;
+}
+
+.menu li {
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+
+.menu li:hover,
+.menu li.active {
+  background: #1e3a8a;
+  color: #ffffff;
+}
+/* =========================
+   RESPONSIVE SIDEBAR → TOPBAR
+   ========================= */
+
+/* Tablet + Mobile */
+@media (max-width: 1024px) {
+
+  .dashboard {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 15px;
+  }
+
+  .logo {
+    margin-bottom: 10px;
+    text-align: center;
+  }
+
+  .menu {
+    display: flex;
+    width: 100%;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .menu li {
+    flex: 1;
+    text-align: center;
+    margin-bottom: 0;
+    padding: 10px;
+    font-size: 0.9rem;
+  }
+
+  .main-content {
+    padding: 15px;
+  }
+}
+
+/* MAIN CONTENT */
+.main-content {
+  flex: 1;
+  padding: 30px;
+  background: #f4f6f9;
+  overflow-y: auto;
+}
+
+/* SECTIONS */
+.section {
+  display: none;
+}
+
+.section.active {
+  display: block;
+}
+
+/* CARDS */
+.card {
+  background: white;
+  padding: 20px;
+  margin-bottom: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+/* INPUTS */
+input, textarea {
+  width: 100%;
+  padding: 10px;
+  margin: 8px 0;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+}
+
+/* BUTTON */
+button {
+  background: #1e3a8a;
+  color: white;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 6px;
+}
+
+button:hover {
+  background: #2563eb;
+}
+
+/* TABLE */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+}
+</style>
+</head>
+<!-- HEADER (unchanged) -->
+    <header>
+  <div class="container header-container">
+    <div class="brand"><img src="ursm logo.png" alt="URS Logo" class="myImage"></div>
+    <nav>
+      <ul class="nav-menu">
+        <li><a href="admin.html">Home</a></li>
+		<li><a href="adminsecurity.html">User Settings</a></li>
+		<div class="user-settings">
+          <div class="gear-icon" id="gearToggle">
+  <svg viewBox="-7.04 -7.04 78.08 78.08" xmlns="http://www.w3.org/2000/svg">
+    <path d="M45,14.67l-2.76,2a1,1,0,0,1-1,.11L37.65,15.3a1,1,0,0,1-.61-.76l-.66-3.77a1,1,0,0,0-1-.84H30.52a1,1,0,0,0-1,.77l-.93,3.72a1,1,0,0,1-.53.65l-3.3,1.66a1,1,0,0,1-1-.08l-3-2.13a1,1,0,0,0-1.31.12l-3.65,3.74a1,1,0,0,0-.13,1.26l1.87,2.88a1,1,0,0,1,.1.89L16.34,27a1,1,0,0,1-.68.63l-3.85,1.06a1,1,0,0,0-.74,1v4.74a1,1,0,0,0,.8,1l3.9.8a1,1,0,0,1,.72.57l1.42,3.15a1,1,0,0,1-.05.92l-2.13,3.63a1,1,0,0,0,.17,1.24L19.32,49a1,1,0,0,0,1.29.09L23.49,47a1,1,0,0,1,1-.1l3.74,1.67a1,1,0,0,1,.59.75l.66,3.79a1,1,0,0,0,1,.84h4.89a1,1,0,0,0,1-.86l.58-4a1,1,0,0,1,.58-.77l3.58-1.62a1,1,0,0,1,1,.09l3.14,2.12a1,1,0,0,0,1.3-.15L50,45.06a1,1,0,0,0,.09-1.27l-2.08-3a1,1,0,0,1-.09-1l1.48-3.43a1,1,0,0,1,.71-.59L53.77,35a1,1,0,0,0,.8-1V29.42a1,1,0,0,0-.8-1l-3.72-.78a1,1,0,0,1-.73-.62l-1.45-3.65a1,1,0,0,1,.11-.94l2.15-3.14A1,1,0,0,0,50,18l-3.71-3.25A1,1,0,0,0,45,14.67Z" 
+          stroke="#ffffff" stroke-width="2" fill="none"/>
+    <circle cx="32.82" cy="31.94" r="9.94" 
+            stroke="#ffffff" stroke-width="2" fill="none"/>
+  </svg>
+</div>
+          <div class="settings-dropdown" id="settingsDropdown">
+            <div class="settings-header"><span>ADMIN</span></div>
+            <hr>
+            <div class="settings-content">
+			 
+              <input id="new-email" type="email" placeholder="New Email"><button id="change-email-btn">Change Email</button>
+			  <input id="new-phone" type="text" placeholder="New Phone"><button id="change-phone-btn">Change Phone</button>
+              <input id="new-password" type="password" placeholder="New Password"><button id="change-password-btn">Change Password</button>
+            </div>
+            <hr>
+            <button id="logoutBtn">Logout</button>
+          </div>
+        </div>
+      </ul>
+    </nav>
+  </div>
+</header>
+<div id="settingsContainer"></div>
+<body>
+<div class="dashboard">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <h2 class="logo">Admin Panel</h2>
+
+    <ul class="menu">
+      <li onclick="showSection('students')" class="active">University Students</li>
+      <li onclick="showSection('users')">Registered Users</li>
+    </ul>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+
+    <!-- STUDENTS SECTION -->
+    <section id="studentsSectionUI" class="section active">
+      <h2>University Students</h2>
+
+      <!-- Add student -->
+      <div class="card">
+        <h3>Add Student</h3>
+        <input id="new_student_number" placeholder="Student Number">
+        <input id="new_full_name" placeholder="Full Name">
+        <button onclick="addStudent()">Add</button>
+      </div>
+
+      <!-- Batch -->
+      <div class="card">
+        <h3>Batch Upload</h3>
+        <textarea id="batchInput" rows="8" 
+		placeholder="Format:
+M2023-00892/Tanjuanco, Dino C. 
+M2023-02892/Tanjuanco, Maris C.
+M2023-00893/Tanjuanco, Damo C."></textarea>
+        <button onclick="batchAddStudents()">Upload Batch</button>
+      </div>
+
+      <!-- Table -->
+      <div class="card">
+        <h3>Student List</h3>
+        <table id="studentsTable">
+		
+          <thead>
+            <tr>
+              <th>Student Number</th>
+              <th>Name</th>
+              <th>Registered</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+		<div class="card" style="display:flex; justify-content:space-between; align-items:center;">
+  <button onclick="prevPage()">Previous</button>
+  
+  <span id="pageInfo" style="font-weight:600;"></span>
+  
+  <button onclick="nextPage()">Next</button>
+</div>
+      </div>
+	  
+    </section>
+
+    <!-- USERS SECTION -->
+    <section id="usersSectionUI" class="section">
+      <h2>Registered Users</h2>
+
+      <div class="card">
+        <table id="usersTable">
+          <thead>
+            <tr>
+              <th>Student Number</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Role</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+</div>
+<script>
+
+const { createClient } = window.supabase;
+
+const supabaseClient = createClient(
+  "https://vwzhzycagqqhcxbopjtc.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ3emh6eWNhZ3FxaGN4Ym9wanRjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1NjI4NjEsImV4cCI6MjA5MDEzODg2MX0.KajiaXQecd-Icu6D9XUKViBsRn4bldVfwoFeamog8ww"
+);
+
+// ================= LOAD CURRENT USER NAME =================
+async function loadCurrentUser() {
+  const { data: { user } } = await supabaseClient.auth.getUser();
+
+  if (!user) {
+    document.getElementById("user-info").textContent = "Not logged in";
+    return;
+  }
+
+  const { data: profile, error } = await supabaseClient
+    .from("profiles")
+    .select("display_name, role")
+    .eq("user_id", user.id)
+    .single();
+
+  if (error || !profile) {
+    document.getElementById("user-info").textContent = "User";
+    return;
+  }
+
+  // 🔥 PRIORITY: display_name → fallback to role
+  let name = profile.display_name;
+
+  if (!name || name.trim() === "") {
+    name = profile.role === "admin" ? "Admin" : "User";
+  }
+
+  document.getElementById("user-info").textContent =
+    `Hello, ${name}`;
+}
+
+// =======================
+// PAGINATION VARIABLES
+// =======================
+let currentPage = 1;
+const rowsPerPage = 10;
+let allStudents = [];
+let isCollapsed = false;
+
+
+// =======================
+// AUTH CHECK (ADMIN ONLY)
+// =======================
+async function checkAdmin() {
+  const { data: { user } } = await supabaseClient.auth.getUser();
+
+  if (!user) {
+    alert("Not logged in");
+    window.location.href = "index.html";
+    return;
+  }
+
+  const { data: profile } = await supabaseClient
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id) // ✅ FIXED HERE
+    .single();
+
+  if (!profile || profile.role !== "admin") {
+    alert("Access denied. Admins only.");
+    window.location.href = "index.html";
+  }
+}
+
+
+// =======================
+// LOAD STUDENTS
+// =======================
+async function loadStudents() {
+  const { data, error } = await supabaseClient
+    .from("students_masterlist")
+    .select("*")
+    .order("student_number", { ascending: false }); // ✅ DESCENDING
+
+  if (error) {
+    console.error(error);
+    alert("Error loading students");
+    return;
+  }
+
+  allStudents = data;
+  currentPage = 1;
+  renderTable();
+}
+
+// =======================
+// RENDER TABLE (PAGINATION)
+// =======================
+function renderTable() {
+  const tbody = document.querySelector("#studentsTable tbody");
+  tbody.innerHTML = "";
+
+  const start = (currentPage - 1) * rowsPerPage;
+  const end = start + rowsPerPage;
+  const pageData = allStudents.slice(start, end);
+
+  pageData.forEach(student => {
+   const row = `
+  <tr>
+    <td contenteditable="true" spellcheck="false"
+    style="background:#fff8dc; cursor:text;"
+    onblur="updateStudent('${student.id}', 'student_number', this.innerText)">
+  ${student.student_number}
+</td>
+
+    <td contenteditable="true"
+        onblur="updateStudent('${student.id}', 'full_name', this.innerText)">
+      ${student.full_name}
+    </td>
+
+    <td>${student.is_registered}</td>
+
+    <td>
+      <button onclick="deleteStudent('${student.id}')">Delete</button>
+    </td>
+  </tr>
+`;
+    tbody.innerHTML += row;
+  });
+
+  // Page info
+  const total = allStudents.length;
+  const pageInfo = document.getElementById("pageInfo");
+
+  pageInfo.innerText =
+    `Page ${currentPage} (${start + 1}-${Math.min(end, total)} of ${total})`;
+}
+
+
+// =======================
+// PAGINATION CONTROLS
+// =======================
+function nextPage() {
+  if (currentPage * rowsPerPage < allStudents.length) {
+    currentPage++;
+    renderTable();
+  }
+}
+
+function prevPage() {
+  if (currentPage > 1) {
+    currentPage--;
+    renderTable();
+  }
+}
+
+
+// =======================
+// COLLAPSIBLE
+// =======================
+function toggleStudents() {
+  const section = document.getElementById("studentsSection");
+  isCollapsed = !isCollapsed;
+  section.style.display = isCollapsed ? "none" : "block";
+}
+
+
+// =======================
+// LOAD USERS
+// =======================
+async function loadUsers() {
+  const { data, error } = await supabaseClient
+    .from("profiles")
+    .select("*");
+
+  if (error) {
+    console.error(error);
+    alert("Error loading users");
+    return;
+  }
+
+  const tbody = document.querySelector("#usersTable tbody");
+  tbody.innerHTML = "";
+
+  data.forEach(user => {
+    const row = `
+  <tr>
+    <td>${user.student_number}</td>
+
+    <td>${user.full_name}</td>
+
+    <td>${user.email}</td>
+
+    <td>${user.phone || ""}</td>
+
+    <td>
+      <select onchange="updateUser('${user.id}', 'role', this.value)">
+        <option value="user" ${user.role === "user" ? "selected" : ""}>user</option>
+        <option value="admin" ${user.role === "admin" ? "selected" : ""}>admin</option>
+      </select>
+    </td>
+
+    <td>
+      <button onclick="deleteUser('${user.id}')">Delete</button>
+    </td>
+  </tr>
+`;
+    tbody.innerHTML += row;
+  });
+}
+
+async function updateUser(id, field, value) {
+
+  if (field === "role") {
+    value = value.toLowerCase();
+  }
+
+  const { error } = await supabaseClient
+    .from("profiles")
+    .update({ role: value })
+    .eq("id", id);
+
+  if (error) {
+    alert("Update failed: " + error.message);
+  } else {
+    console.log("Role updated:", value);
+  }
+}
+
+
+//Delete function
+async function deleteUser(id) {
+  if (!confirm("Delete user?")) return;
+
+  const res = await fetch("https://vwzhzycagqqhcxbopjtc.functions.supabase.co/delete-user", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ user_id: id })
+  });
+
+  const result = await res.json();
+
+  if (!res.ok) {
+    alert(result.error || "Delete failed");
+    return;
+  }
+
+  await loadUsers();
+}
+
+
+async function updateStudent(id, field, value) {
+  const { error } = await supabaseClient
+    .from("students_masterlist")
+    .update({ [field]: value.trim() })
+    .eq("id", id);
+
+  if (error) {
+    alert("Update failed: " + error.message);
+  } else {
+    console.log("Updated:", field, value);
+  }
+}
+
+// =======================
+// ADD STUDENT
+// =======================
+async function addStudent() {
+  const student_number = document.getElementById("new_student_number").value.trim();
+  const full_name = document.getElementById("new_full_name").value.trim();
+
+  if (!student_number || !full_name) {
+    alert("Fill all fields");
+    return;
+  }
+
+  const { error } = await supabaseClient
+    .from("students_masterlist")
+    .insert({
+      student_number,
+      full_name,
+      is_registered: false
+    });
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  document.getElementById("new_student_number").value = "";
+  document.getElementById("new_full_name").value = "";
+
+  loadStudents();
+}
+
+async function batchAddStudents() {
+  const raw = document.getElementById("batchInput").value.trim();
+
+  if (!raw) {
+    alert("Paste student list first.");
+    return;
+  }
+
+  const lines = raw.split("\n");
+
+  const studentsToInsert = [];
+  const errors = [];
+
+  lines.forEach((line, index) => {
+    const clean = line.trim();
+
+    if (!clean) return;
+
+    // Split using "/"
+    const parts = clean.split("/");
+
+    if (parts.length !== 2) {
+      errors.push(`Line ${index + 1}: Invalid format (use / separator)`);
+      return;
+    }
+
+    const student_number = parts[0].trim();
+    const full_name = parts[1].trim();
+
+    // Validation
+    if (!student_number || !full_name) {
+      errors.push(`Line ${index + 1}: Missing data`);
+      return;
+    }
+
+    studentsToInsert.push({
+      student_number,
+      full_name,
+      is_registered: false
+    });
+  });
+
+  if (errors.length > 0) {
+    alert("Errors found:\n" + errors.join("\n"));
+    return;
+  }
+
+  const { error } = await supabaseClient
+    .from("students_masterlist")
+    .insert(studentsToInsert);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  alert("Batch upload successful!");
+
+  document.getElementById("batchInput").value = "";
+
+  loadStudents();
+}
+// =======================
+// UPDATE NAME
+// =======================
+async function updateName(id, newName) {
+  const { error } = await supabaseClient
+    .from("students_masterlist")
+    .update({ full_name: newName })
+    .eq("id", id);
+
+  if (error) {
+    alert(error.message);
+  }
+}
+
+
+// =======================
+// DELETE STUDENT
+// =======================
+async function deleteStudent(id) {
+  if (!confirm("Delete this student?")) return;
+
+  const { error } = await supabaseClient
+    .from("students_masterlist")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  loadStudents();
+}
+
+function showSection(section) {
+  // Hide all
+  document.querySelectorAll(".section").forEach(sec => {
+    sec.classList.remove("active");
+  });
+
+  // Remove active menu
+  document.querySelectorAll(".menu li").forEach(item => {
+    item.classList.remove("active");
+  });
+
+  if (section === "students") {
+    document.getElementById("studentsSectionUI").classList.add("active");
+    document.querySelectorAll(".menu li")[0].classList.add("active");
+
+    loadStudents(); // ✅ refresh students
+  } else {
+    document.getElementById("usersSectionUI").classList.add("active");
+    document.querySelectorAll(".menu li")[1].classList.add("active");
+
+    loadUsers(); // ✅ THIS FIXES YOUR ISSUE
+  }
+}
+
+// =======================
+// INIT
+// =======================
+async function init() {
+  await checkAdmin();
+  await loadCurrentUser(); // 👈 ADD THIS
+  await loadStudents();
+  await loadUsers();
+}
+
+init();
+
+</script>
+<script src="settings.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  initSettings();
+});
+</script>
+</body>
+</html>
