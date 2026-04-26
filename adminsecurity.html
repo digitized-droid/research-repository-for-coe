@@ -658,6 +658,7 @@ function renderUsers(data) {
   });
 
   tbody.innerHTML = html;
+  
 }
 
 function filterUsers() {
@@ -755,8 +756,12 @@ function renderStudents() {
 
   tbody.innerHTML = html;
 
-  document.getElementById("pageInfo").innerText =
-    `Page ${currentPage}`;
+   // Page info
+  const total = allStudents.length;
+  const pageInfo = document.getElementById("pageInfo");
+
+  pageInfo.innerText =
+    `Page ${currentPage} (${start + 1}-${Math.min(end, total)} of ${total})`;
 }
 
 function filterStudents() {
