@@ -388,6 +388,7 @@ th, td {
 }
 </style>
 </head>
+<body>
 <!-- HEADER (unchanged) -->
     <header>
   <div class="container header-container">
@@ -423,7 +424,6 @@ th, td {
   </div>
 </header>
 <div id="settingsContainer"></div>
-<body>
 <div class="dashboard">
 
   <!-- SIDEBAR -->
@@ -431,8 +431,8 @@ th, td {
     <h2 class="logo">Admin Panel</h2>
 
     <ul class="menu">
-      <li onclick="showSection('students')" class="active">University Students</li>
-      <li onclick="showSection('users')">Registered Users</li>
+	  <li onclick="showSection('users')" class="active">Registered Users</li>
+      <li onclick="showSection('students')">University Students</li>
     </ul>
   </aside>
 
@@ -440,7 +440,7 @@ th, td {
   <main class="main-content">
 
     <!-- STUDENTS SECTION -->
-    <section id="studentsSectionUI" class="section active">
+    <section id="studentsSectionUI" class="section">
       <h2>University Students</h2>
 
       <!-- Add student -->
@@ -464,9 +464,14 @@ M2023-00893/Tanjuanco, Damo C."></textarea>
 
       <!-- Table -->
       <div class="card">
+	  <input 
+  type="text" 
+  id="studentSearch" 
+  placeholder="Search by Student Number or Name..."
+  onkeyup="filterStudents()"
+  style="margin-bottom:10px; padding:8px;">
         <h3>Student List</h3>
         <table id="studentsTable">
-		
           <thead>
             <tr>
               <th>Student Number</th>
@@ -489,10 +494,16 @@ M2023-00893/Tanjuanco, Damo C."></textarea>
     </section>
 
     <!-- USERS SECTION -->
-    <section id="usersSectionUI" class="section">
+    <section id="usersSectionUI" class="section active">
       <h2>Registered Users</h2>
-
       <div class="card">
+  <input 
+    type="text" 
+    id="userSearch" 
+    placeholder="Search by Student Number, Name, Email..."
+    onkeyup="filterUsers()"
+    style="margin-bottom:10px; padding:8px;"
+  >
         <table id="usersTable">
           <thead>
             <tr>
@@ -558,7 +569,8 @@ let currentPage = 1;
 const rowsPerPage = 10;
 let allStudents = [];
 let isCollapsed = false;
-
+let allUsers = [];
+let currentStudentView = [];
 
 // =======================
 // AUTH CHECK (ADMIN ONLY)
@@ -601,20 +613,21 @@ async function loadStudents() {
   }
 
   allStudents = data;
-  currentPage = 1;
-  renderTable();
+currentStudentView = allStudents;
+currentPage = 1;
+renderTable(currentStudentView);
 }
 
 // =======================
 // RENDER TABLE (PAGINATION)
 // =======================
-function renderTable() {
+function renderTable(data = allStudents) {
   const tbody = document.querySelector("#studentsTable tbody");
   tbody.innerHTML = "";
 
   const start = (currentPage - 1) * rowsPerPage;
   const end = start + rowsPerPage;
-  const pageData = allStudents.slice(start, end);
+  const pageData = data.slice(start, end);
 
   pageData.forEach(student => {
    const row = `
@@ -641,28 +654,39 @@ function renderTable() {
   });
 
   // Page info
-  const total = allStudents.length;
+  const total = data.length;
   const pageInfo = document.getElementById("pageInfo");
 
   pageInfo.innerText =
     `Page ${currentPage} (${start + 1}-${Math.min(end, total)} of ${total})`;
 }
 
+function filterStudents() {
+  const keyword = document.getElementById("studentSearch").value.toLowerCase();
+
+  currentStudentView = allStudents.filter(student =>
+    student.student_number.toLowerCase().includes(keyword) ||
+    student.full_name.toLowerCase().includes(keyword)
+  );
+
+  currentPage = 1;
+  renderTable(currentStudentView);
+}
 
 // =======================
 // PAGINATION CONTROLS
 // =======================
 function nextPage() {
-  if (currentPage * rowsPerPage < allStudents.length) {
+  if (currentPage * rowsPerPage < currentStudentView.length) {
     currentPage++;
-    renderTable();
+    renderTable(currentStudentView);
   }
 }
 
 function prevPage() {
   if (currentPage > 1) {
     currentPage--;
-    renderTable();
+    renderTable(currentStudentView);
   }
 }
 
@@ -691,34 +715,8 @@ async function loadUsers() {
     return;
   }
 
-  const tbody = document.querySelector("#usersTable tbody");
-  tbody.innerHTML = "";
-
-  data.forEach(user => {
-    const row = `
-  <tr>
-    <td>${user.student_number}</td>
-
-    <td>${user.full_name}</td>
-
-    <td>${user.email}</td>
-
-    <td>${user.phone || ""}</td>
-
-    <td>
-      <select onchange="updateUser('${user.id}', 'role', this.value)">
-        <option value="user" ${user.role === "user" ? "selected" : ""}>user</option>
-        <option value="admin" ${user.role === "admin" ? "selected" : ""}>admin</option>
-      </select>
-    </td>
-
-    <td>
-      <button onclick="deleteUser('${user.id}')">Delete</button>
-    </td>
-  </tr>
-`;
-    tbody.innerHTML += row;
-  });
+  allUsers = data;
+  renderUsers(allUsers);
 }
 
 async function updateUser(id, field, value) {
@@ -744,18 +742,13 @@ async function updateUser(id, field, value) {
 async function deleteUser(id) {
   if (!confirm("Delete user?")) return;
 
-  const res = await fetch("https://vwzhzycagqqhcxbopjtc.functions.supabase.co/delete-user", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ user_id: id })
-  });
+  const { error } = await supabaseClient
+    .from("profiles")
+    .delete()
+    .eq("id", id);
 
-  const result = await res.json();
-
-  if (!res.ok) {
-    alert(result.error || "Delete failed");
+  if (error) {
+    alert("Delete failed: " + error.message);
     return;
   }
 
@@ -903,28 +896,64 @@ async function deleteStudent(id) {
   loadStudents();
 }
 
-function showSection(section) {
-  // Hide all
+async function showSection(section) {
+  // Hide all sections
   document.querySelectorAll(".section").forEach(sec => {
     sec.classList.remove("active");
   });
 
-  // Remove active menu
+  // Remove active menu highlight
   document.querySelectorAll(".menu li").forEach(item => {
     item.classList.remove("active");
   });
 
-  if (section === "students") {
-    document.getElementById("studentsSectionUI").classList.add("active");
-    document.querySelectorAll(".menu li")[0].classList.add("active");
+if (section === "users") {
+  document.getElementById("usersSectionUI").classList.add("active");
+  document.querySelectorAll(".menu li")[0].classList.add("active");
+  await loadUsers();     // ✅ WAIT
+} else {
+  document.getElementById("studentsSectionUI").classList.add("active");
+  document.querySelectorAll(".menu li")[1].classList.add("active");
+  await loadStudents();  // ✅ WAIT
+}
+}
 
-    loadStudents(); // ✅ refresh students
-  } else {
-    document.getElementById("usersSectionUI").classList.add("active");
-    document.querySelectorAll(".menu li")[1].classList.add("active");
+function renderUsers(data) {
+  const tbody = document.querySelector("#usersTable tbody");
 
-    loadUsers(); // ✅ THIS FIXES YOUR ISSUE
-  }
+  tbody.innerHTML = "";
+
+  data.forEach(user => {
+    const row = `
+      <tr>
+        <td>${user.student_number}</td>
+        <td>${user.full_name}</td>
+        <td>${user.email}</td>
+        <td>${user.phone || ""}</td>
+        <td>
+          <select onchange="updateUser('${user.id}', 'role', this.value)">
+            <option value="user" ${user.role === "user" ? "selected" : ""}>user</option>
+            <option value="admin" ${user.role === "admin" ? "selected" : ""}>admin</option>
+          </select>
+        </td>
+        <td>
+          <button onclick="deleteUser('${user.id}')">Delete</button>
+        </td>
+      </tr>
+    `;
+    tbody.innerHTML += row;
+  });
+}
+function filterUsers() {
+  const keyword = document.getElementById("userSearch").value.toLowerCase();
+
+  const filtered = allUsers.filter(user =>
+    (user.student_number || "").toLowerCase().includes(keyword) ||
+    (user.full_name || "").toLowerCase().includes(keyword) ||
+    (user.email || "").toLowerCase().includes(keyword)
+  );
+
+  renderUsers(filtered);
 }
 
 // =======================
@@ -932,12 +961,13 @@ function showSection(section) {
 // =======================
 async function init() {
   await checkAdmin();
-  await loadCurrentUser(); // 👈 ADD THIS
-  await loadStudents();
-  await loadUsers();
+  await loadCurrentUser();
+  await loadUsers();  // load once
 }
 
-init();
+document.addEventListener("DOMContentLoaded", async () => {
+  await init();
+});
 
 </script>
 <script src="settings.js"></script>
