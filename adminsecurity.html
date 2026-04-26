@@ -494,7 +494,7 @@ M2023-00893/Tanjuanco, Damo C."></textarea>
     </section>
 
     <!-- USERS SECTION -->
-    <section id="usersSectionUI" class="section active">
+    <section id="usersSectionUI" class="section">
       <h2>Registered Users</h2>
       <div class="card">
   <input 
@@ -531,421 +531,138 @@ const supabaseClient = createClient(
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ3emh6eWNhZ3FxaGN4Ym9wanRjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1NjI4NjEsImV4cCI6MjA5MDEzODg2MX0.KajiaXQecd-Icu6D9XUKViBsRn4bldVfwoFeamog8ww"
 );
 
-// ================= LOAD CURRENT USER NAME =================
-async function loadCurrentUser() {
-  const { data: { user } } = await supabaseClient.auth.getUser();
+/* =========================
+   GLOBAL STATE
+========================= */
+let allUsers = [];
+let allStudents = [];
+let currentStudentView = [];
 
-  if (!user) {
-    document.getElementById("user-info").textContent = "Not logged in";
+let currentPage = 1;
+const rowsPerPage = 10;
+
+/* =========================
+   INIT
+========================= */
+document.addEventListener("DOMContentLoaded", async () => {
+  await init();
+  initSettings();
+});
+
+async function init() {
+  await checkAdmin();
+
+  /* load BOTH immediately */
+  await Promise.all([
+    loadUsers(),
+    loadStudents()
+  ]);
+
+  /* default visible page */
+  showSection("users");
+}
+
+/* =========================
+   ADMIN CHECK
+========================= */
+async function checkAdmin() {
+  const {
+    data: { session }
+  } = await supabaseClient.auth.getSession();
+
+  if (!session) {
+    location.replace("index.html");
     return;
   }
+
+  const user = session.user;
 
   const { data: profile, error } = await supabaseClient
     .from("profiles")
-    .select("display_name, role")
-    .eq("user_id", user.id)
+    .select("role")
+    .eq("id", user.id)
     .single();
 
-  if (error || !profile) {
-    document.getElementById("user-info").textContent = "User";
-    return;
-  }
-
-  // 🔥 PRIORITY: display_name → fallback to role
-  let name = profile.display_name;
-
-  if (!name || name.trim() === "") {
-    name = profile.role === "admin" ? "Admin" : "User";
-  }
-
-  document.getElementById("user-info").textContent =
-    `Hello, ${name}`;
-}
-
-// =======================
-// PAGINATION VARIABLES
-// =======================
-let currentPage = 1;
-const rowsPerPage = 10;
-let allStudents = [];
-let isCollapsed = false;
-let allUsers = [];
-let currentStudentView = [];
-
-// =======================
-// AUTH CHECK (ADMIN ONLY)
-// =======================
-async function checkAdmin() {
-  const { data: { user } } = await supabaseClient.auth.getUser();
-
-  if (!user) {
-    alert("Not logged in");
-    window.location.href = "index.html";
-    return;
-  }
-
-  const { data: profile } = await supabaseClient
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id) // ✅ FIXED HERE
-    .single();
-
-  if (!profile || profile.role !== "admin") {
-    alert("Access denied. Admins only.");
-    window.location.href = "index.html";
+  if (error || !profile || profile.role !== "admin") {
+    await supabaseClient.auth.signOut();
+    location.replace("index.html");
   }
 }
 
-
-// =======================
-// LOAD STUDENTS
-// =======================
-async function loadStudents() {
-  const { data, error } = await supabaseClient
-    .from("students_masterlist")
-    .select("*")
-    .order("student_number", { ascending: false }); // ✅ DESCENDING
-
-  if (error) {
-    console.error(error);
-    alert("Error loading students");
-    return;
-  }
-
-  allStudents = data;
-currentStudentView = allStudents;
-currentPage = 1;
-renderTable(currentStudentView);
-}
-
-// =======================
-// RENDER TABLE (PAGINATION)
-// =======================
-function renderTable(data = allStudents) {
-  const tbody = document.querySelector("#studentsTable tbody");
-  tbody.innerHTML = "";
-
-  const start = (currentPage - 1) * rowsPerPage;
-  const end = start + rowsPerPage;
-  const pageData = data.slice(start, end);
-
-  pageData.forEach(student => {
-   const row = `
-  <tr>
-    <td contenteditable="true" spellcheck="false"
-    style="background:#fff8dc; cursor:text;"
-    onblur="updateStudent('${student.id}', 'student_number', this.innerText)">
-  ${student.student_number}
-</td>
-
-    <td contenteditable="true"
-        onblur="updateStudent('${student.id}', 'full_name', this.innerText)">
-      ${student.full_name}
-    </td>
-
-    <td>${student.is_registered}</td>
-
-    <td>
-      <button onclick="deleteStudent('${student.id}')">Delete</button>
-    </td>
-  </tr>
-`;
-    tbody.innerHTML += row;
-  });
-
-  // Page info
-  const total = data.length;
-  const pageInfo = document.getElementById("pageInfo");
-
-  pageInfo.innerText =
-    `Page ${currentPage} (${start + 1}-${Math.min(end, total)} of ${total})`;
-}
-
-function filterStudents() {
-  const keyword = document.getElementById("studentSearch").value.toLowerCase();
-
-  currentStudentView = allStudents.filter(student =>
-    student.student_number.toLowerCase().includes(keyword) ||
-    student.full_name.toLowerCase().includes(keyword)
-  );
-
-  currentPage = 1;
-  renderTable(currentStudentView);
-}
-
-// =======================
-// PAGINATION CONTROLS
-// =======================
-function nextPage() {
-  if (currentPage * rowsPerPage < currentStudentView.length) {
-    currentPage++;
-    renderTable(currentStudentView);
-  }
-}
-
-function prevPage() {
-  if (currentPage > 1) {
-    currentPage--;
-    renderTable(currentStudentView);
-  }
-}
-
-
-// =======================
-// COLLAPSIBLE
-// =======================
-function toggleStudents() {
-  const section = document.getElementById("studentsSection");
-  isCollapsed = !isCollapsed;
-  section.style.display = isCollapsed ? "none" : "block";
-}
-
-
-// =======================
-// LOAD USERS
-// =======================
-async function loadUsers() {
-  const { data, error } = await supabaseClient
-    .from("profiles")
-    .select("*");
-
-  if (error) {
-    console.error(error);
-    alert("Error loading users");
-    return;
-  }
-
-  allUsers = data;
-  renderUsers(allUsers);
-}
-
-async function updateUser(id, field, value) {
-
-  if (field === "role") {
-    value = value.toLowerCase();
-  }
-
-  const { error } = await supabaseClient
-    .from("profiles")
-    .update({ role: value })
-    .eq("id", id);
-
-  if (error) {
-    alert("Update failed: " + error.message);
-  } else {
-    console.log("Role updated:", value);
-  }
-}
-
-
-//Delete function
-async function deleteUser(id) {
-  if (!confirm("Delete user?")) return;
-
-  const { error } = await supabaseClient
-    .from("profiles")
-    .delete()
-    .eq("id", id);
-
-  if (error) {
-    alert("Delete failed: " + error.message);
-    return;
-  }
-
-  await loadUsers();
-}
-
-
-async function updateStudent(id, field, value) {
-  const { error } = await supabaseClient
-    .from("students_masterlist")
-    .update({ [field]: value.trim() })
-    .eq("id", id);
-
-  if (error) {
-    alert("Update failed: " + error.message);
-  } else {
-    console.log("Updated:", field, value);
-  }
-}
-
-// =======================
-// ADD STUDENT
-// =======================
-async function addStudent() {
-  const student_number = document.getElementById("new_student_number").value.trim();
-  const full_name = document.getElementById("new_full_name").value.trim();
-
-  if (!student_number || !full_name) {
-    alert("Fill all fields");
-    return;
-  }
-
-  const { error } = await supabaseClient
-    .from("students_masterlist")
-    .insert({
-      student_number,
-      full_name,
-      is_registered: false
-    });
-
-  if (error) {
-    alert(error.message);
-    return;
-  }
-
-  document.getElementById("new_student_number").value = "";
-  document.getElementById("new_full_name").value = "";
-
-  loadStudents();
-}
-
-async function batchAddStudents() {
-  const raw = document.getElementById("batchInput").value.trim();
-
-  if (!raw) {
-    alert("Paste student list first.");
-    return;
-  }
-
-  const lines = raw.split("\n");
-
-  const studentsToInsert = [];
-  const errors = [];
-
-  lines.forEach((line, index) => {
-    const clean = line.trim();
-
-    if (!clean) return;
-
-    // Split using "/"
-    const parts = clean.split("/");
-
-    if (parts.length !== 2) {
-      errors.push(`Line ${index + 1}: Invalid format (use / separator)`);
-      return;
-    }
-
-    const student_number = parts[0].trim();
-    const full_name = parts[1].trim();
-
-    // Validation
-    if (!student_number || !full_name) {
-      errors.push(`Line ${index + 1}: Missing data`);
-      return;
-    }
-
-    studentsToInsert.push({
-      student_number,
-      full_name,
-      is_registered: false
-    });
-  });
-
-  if (errors.length > 0) {
-    alert("Errors found:\n" + errors.join("\n"));
-    return;
-  }
-
-  const { error } = await supabaseClient
-    .from("students_masterlist")
-    .insert(studentsToInsert);
-
-  if (error) {
-    alert(error.message);
-    return;
-  }
-
-  alert("Batch upload successful!");
-
-  document.getElementById("batchInput").value = "";
-
-  loadStudents();
-}
-// =======================
-// UPDATE NAME
-// =======================
-async function updateName(id, newName) {
-  const { error } = await supabaseClient
-    .from("students_masterlist")
-    .update({ full_name: newName })
-    .eq("id", id);
-
-  if (error) {
-    alert(error.message);
-  }
-}
-
-
-// =======================
-// DELETE STUDENT
-// =======================
-async function deleteStudent(id) {
-  if (!confirm("Delete this student?")) return;
-
-  const { error } = await supabaseClient
-    .from("students_masterlist")
-    .delete()
-    .eq("id", id);
-
-  if (error) {
-    alert(error.message);
-    return;
-  }
-
-  loadStudents();
-}
-
-async function showSection(section) {
-  // Hide all sections
+/* =========================
+   SECTION SWITCHER
+========================= */
+function showSection(section) {
   document.querySelectorAll(".section").forEach(sec => {
     sec.classList.remove("active");
   });
 
-  // Remove active menu highlight
-  document.querySelectorAll(".menu li").forEach(item => {
-    item.classList.remove("active");
+  document.querySelectorAll(".menu li").forEach(li => {
+    li.classList.remove("active");
   });
 
-if (section === "users") {
-  document.getElementById("usersSectionUI").classList.add("active");
-  document.querySelectorAll(".menu li")[0].classList.add("active");
-  await loadUsers();     // ✅ WAIT
-} else {
-  document.getElementById("studentsSectionUI").classList.add("active");
-  document.querySelectorAll(".menu li")[1].classList.add("active");
-  await loadStudents();  // ✅ WAIT
+  if (section === "users") {
+    document.getElementById("usersSectionUI").classList.add("active");
+    document.querySelectorAll(".menu li")[0].classList.add("active");
+  } else {
+    document.getElementById("studentsSectionUI").classList.add("active");
+    document.querySelectorAll(".menu li")[1].classList.add("active");
+  }
 }
+
+/* =========================
+   USERS
+========================= */
+async function loadUsers() {
+  const { data, error } = await supabaseClient
+    .from("profiles")
+    .select("*")
+    .order("full_name", { ascending: true });
+
+  if (error) {
+    console.error(error);
+    alert("Failed loading users");
+    return;
+  }
+
+  allUsers = data || [];
+  renderUsers(allUsers);
 }
 
 function renderUsers(data) {
   const tbody = document.querySelector("#usersTable tbody");
-
   tbody.innerHTML = "";
 
+  let html = "";
+
   data.forEach(user => {
-    const row = `
+    html += `
       <tr>
-        <td>${user.student_number}</td>
-        <td>${user.full_name}</td>
-        <td>${user.email}</td>
+        <td>${user.student_number || ""}</td>
+        <td>${user.full_name || ""}</td>
+        <td>${user.email || ""}</td>
         <td>${user.phone || ""}</td>
+
         <td>
-          <select onchange="updateUser('${user.id}', 'role', this.value)">
+          <select onchange="updateUserRole('${user.id}', this.value)">
             <option value="user" ${user.role === "user" ? "selected" : ""}>user</option>
             <option value="admin" ${user.role === "admin" ? "selected" : ""}>admin</option>
           </select>
         </td>
+
         <td>
           <button onclick="deleteUser('${user.id}')">Delete</button>
         </td>
       </tr>
     `;
-    tbody.innerHTML += row;
   });
+
+  tbody.innerHTML = html;
 }
+
 function filterUsers() {
-  const keyword = document.getElementById("userSearch").value.toLowerCase();
+  const keyword =
+    document.getElementById("userSearch").value.toLowerCase();
 
   const filtered = allUsers.filter(user =>
     (user.student_number || "").toLowerCase().includes(keyword) ||
@@ -956,25 +673,175 @@ function filterUsers() {
   renderUsers(filtered);
 }
 
-// =======================
-// INIT
-// =======================
-async function init() {
-  await checkAdmin();
-  await loadCurrentUser();
-  await loadUsers();  // load once
+async function updateUserRole(id, role) {
+  const { error } = await supabaseClient
+    .from("profiles")
+    .update({ role })
+    .eq("id", id);
+
+  if (error) alert(error.message);
 }
 
-document.addEventListener("DOMContentLoaded", async () => {
-  await init();
-});
+async function deleteUser(id) {
+  if (!confirm("Delete user?")) return;
 
+  const { error } = await supabaseClient
+    .from("profiles")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  await loadUsers();
+}
+
+/* =========================
+   STUDENTS
+========================= */
+async function loadStudents() {
+  const { data, error } = await supabaseClient
+    .from("students_masterlist")
+    .select("*")
+    .order("student_number", { ascending: false });
+
+  if (error) {
+    console.error(error);
+    alert("Failed loading students");
+    return;
+  }
+
+  allStudents = data || [];
+  currentStudentView = [...allStudents];
+  currentPage = 1;
+
+  renderStudents();
+}
+
+function renderStudents() {
+  const tbody = document.querySelector("#studentsTable tbody");
+  tbody.innerHTML = "";
+
+  const start = (currentPage - 1) * rowsPerPage;
+  const end = start + rowsPerPage;
+
+  const rows = currentStudentView.slice(start, end);
+
+  let html = "";
+
+  rows.forEach(student => {
+    html += `
+      <tr>
+        <td contenteditable="true"
+            onblur="updateStudent('${student.id}','student_number',this.innerText)">
+          ${student.student_number}
+        </td>
+
+        <td contenteditable="true"
+            onblur="updateStudent('${student.id}','full_name',this.innerText)">
+          ${student.full_name}
+        </td>
+
+        <td>${student.is_registered}</td>
+
+        <td>
+          <button onclick="deleteStudent('${student.id}')">Delete</button>
+        </td>
+      </tr>
+    `;
+  });
+
+  tbody.innerHTML = html;
+
+  document.getElementById("pageInfo").innerText =
+    `Page ${currentPage}`;
+}
+
+function filterStudents() {
+  const keyword =
+    document.getElementById("studentSearch").value.toLowerCase();
+
+  currentStudentView = allStudents.filter(student =>
+    student.student_number.toLowerCase().includes(keyword) ||
+    student.full_name.toLowerCase().includes(keyword)
+  );
+
+  currentPage = 1;
+  renderStudents();
+}
+
+function nextPage() {
+  if (currentPage * rowsPerPage < currentStudentView.length) {
+    currentPage++;
+    renderStudents();
+  }
+}
+
+function prevPage() {
+  if (currentPage > 1) {
+    currentPage--;
+    renderStudents();
+  }
+}
+
+async function updateStudent(id, field, value) {
+  const { error } = await supabaseClient
+    .from("students_masterlist")
+    .update({ [field]: value.trim() })
+    .eq("id", id);
+
+  if (error) alert(error.message);
+}
+
+async function deleteStudent(id) {
+  if (!confirm("Delete student?")) return;
+
+  const { error } = await supabaseClient
+    .from("students_masterlist")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  await loadStudents();
+}
+
+async function addStudent() {
+  const student_number =
+    document.getElementById("new_student_number").value.trim();
+
+  const full_name =
+    document.getElementById("new_full_name").value.trim();
+
+  if (!student_number || !full_name) {
+    alert("Fill all fields");
+    return;
+  }
+
+  const { error } = await supabaseClient
+    .from("students_masterlist")
+    .insert([{
+      student_number,
+      full_name,
+      is_registered: false
+    }]);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  document.getElementById("new_student_number").value = "";
+  document.getElementById("new_full_name").value = "";
+
+  await loadStudents();
+}
 </script>
 <script src="settings.js"></script>
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-  initSettings();
-});
-</script>
 </body>
 </html>
