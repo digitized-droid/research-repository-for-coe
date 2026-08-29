@@ -387,6 +387,7 @@ const logoutBtn = document.getElementById("logoutBtn");
 const userInfo = document.getElementById("user-info");
 
 let isSignup = false;
+let isLoggingIn = false;
 
 // ---------------- TOAST ----------------
 function showToast(message, type = "info") {
@@ -557,50 +558,150 @@ setButtonState(btn, "normal");
 // ---------------- LOGIN ----------------
 async function login(){
   const btn = authBtn;
+
+  isLoggingIn = true;
   setButtonState(btn, "loading");
 
   try {
-    const student = normalizeStudentNumber(document.getElementById("li_student").value);
-    const email = document.getElementById("li_email").value.trim();
-    const password = document.getElementById("li_password").value;
 
-    const { data, error } =
-      await supabaseClient.auth.signInWithPassword({ email, password });
+    const student = normalizeStudentNumber(
+      document.getElementById("li_student").value
+    );
 
-    if(error){
-      showToast(error.message, "error");
-      setButtonState(btn, "normal");
+    const email =
+      document.getElementById("li_email").value.trim();
+
+    const password =
+      document.getElementById("li_password").value;
+
+
+    // =========================
+    // CHECK EMPTY INPUTS
+    // =========================
+
+    if (!student) {
+      showToast("Please enter your student number.", "error");
       return;
     }
+
+    if (!email) {
+      showToast("Please enter your email.", "error");
+      return;
+    }
+
+    if (!password) {
+      showToast("Please enter your password.", "error");
+      return;
+    }
+
+
+    // =========================
+    // ORIGINAL SUPABASE LOGIN
+    // =========================
+
+    const { data, error } =
+      await supabaseClient.auth.signInWithPassword({
+        email,
+        password
+      });
+
+
+    // =========================
+    // EMAIL / PASSWORD ERROR
+    // =========================
+
+    if(error){
+
+      showToast(
+        "Email or password is incorrect.",
+        "error"
+      );
+
+      return;
+    }
+
+
+    // =========================
+    // ORIGINAL PROFILE CHECK
+    // =========================
 
     const user = data.user;
 
-    const { data: profiles } = await supabaseClient
-      .from("profiles")
-      .select("*")
-      .eq("id", user.id);
+    const { data: profiles, error: profileError } =
+      await supabaseClient
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id);
 
-    const profile = profiles.find(p =>
-      normalizeStudentNumber(p.student_number) === student
-    );
 
-    if(!profile){
-      showToast("Student number mismatch", "error");
+    if(profileError){
+      console.error("PROFILE ERROR:", profileError);
+
+      showToast(
+        "Unable to verify your student number.",
+        "error"
+      );
+
       await supabaseClient.auth.signOut();
-      setButtonState(btn, "normal");
+
       return;
     }
 
-    showToast("Login successful!", "success");
+
+    const profile = profiles?.find(p =>
+      normalizeStudentNumber(p.student_number) === student
+    );
+
+
+    // =========================
+    // STUDENT NUMBER ERROR
+    // =========================
+
+    if(!profile){
+
+      showToast(
+        "Student number is incorrect.",
+        "error"
+      );
+
+      await supabaseClient.auth.signOut();
+
+      return;
+    }
+
+
+    // =========================
+    // SUCCESS
+    // =========================
+
+    showToast(
+      "Login successful!",
+      "success"
+    );
+
+    // Allow the normal redirect now
+    isLoggingIn = false;
 
     await redirectByRole(user.id);
 
-  } catch (err) {
-    console.error(err);
-    showToast("Unexpected error", "error");
-  }
+    return;
 
-  setButtonState(btn, "normal");
+
+  } catch (err) {
+
+    console.error(err);
+
+    showToast(
+      "Unexpected error. Please try again.",
+      "error"
+    );
+
+  } finally {
+
+    isLoggingIn = false;
+    setButtonState(btn, "normal");
+
+  }
 }
 
 // ---------------- LOGOUT ----------------
@@ -630,6 +731,10 @@ async function loadUser(){
 
 // ---------------- AUTH STATE CHANGE ----------------
 supabaseClient.auth.onAuthStateChange((event, session)=>{
+  // Do not redirect while login() is still checking
+  // the student's student number.
+  if(isLoggingIn) return;
+
   if(session?.user?.id){
     redirectByRole(session.user.id);
   }
